@@ -5,6 +5,10 @@
 #include <Eigen/Dense>
 #include "env_adaptive_core.hpp"
 
+// Reference: Titterton, D. and Weston, J. (2004)
+// "Strapdown Inertial Navigation Technology" (2nd Edition), AIAA
+// Groves, P.D. (2013) "Principles of GNSS, Inertial, and Integrated Navigation Systems"
+
 struct State_L1 {
     std::array<float, 13> x{}; 
     float p_limit = 15000.0f;
@@ -16,13 +20,14 @@ private:
     State_L1 state;
     static constexpr double MASS = 45.0;
     static constexpr double AREA = 1.0;
-    static constexpr double OMEGA = 7.292115e-5f;   // 地球自転角速度
+    static constexpr double OMEGA = 7.292115e-5;   // rad/s
+    double latitude = 45.0 * M_PI / 180.0;         // 初期緯度（可変可）
 
     static double get_cd(double mach) {
-        if (mach < 0.8)      return 0.45f;
-        else if (mach < 1.2) return 0.45f + 3.75f * (mach - 0.8f);
-        else if (mach < 5.0) return 1.2f - 0.18f * (mach - 1.2f);
-        else                 return 0.3f;
+        if (mach < 0.8)      return 0.45;
+        else if (mach < 1.2) return 0.45 + 3.75 * (mach - 0.8);
+        else if (mach < 5.0) return 1.2 - 0.18 * (mach - 1.2);
+        else                 return 0.3;
     }
 
 public:
@@ -49,26 +54,31 @@ public:
 
         Eigen::Vector3f accel = obs_accel;
 
-        // 空力抗力（マッハ依存）
+        // マッハ依存抗力
         if (v2 > 1e-6) {
-            Eigen::Vector3f drag = -0.5 * rho * cd * AREA / MASS * v2 * vel.normalized();
-            accel += drag;
+            accel += -0.5 * rho * cd * AREA / MASS * v2 * vel.normalized();
         }
 
         // 重力（高度依存）
         accel[2] -= g;
 
-        // コリオリ力（北半球簡易モデル）
-        constexpr float f = 2.0f * OMEGA * 0.707f;
-        accel[0] += f * vel[1];
-        accel[1] -= f * vel[0];
+        // 緯度依存コリオリ + 地球曲率補正（NED座標）
+        double sin_lat = std::sin(latitude);
+        double cos_lat = std::cos(latitude);
+        double f = 2.0 * OMEGA * sin_lat;                    // Coriolis parameter
+        double R = 6378137.0 + alt_m;                        // 地球曲率半径
+        double tan_lat_over_R = std::tan(latitude) / R;      // 曲率項
 
-        // 状態更新
+        accel[0] += f * vel[1] + tan_lat_over_R * vel[0] * vel[1];   // East
+        accel[1] -= f * vel[0] + tan_lat_over_R * vel[0] * vel[0];   // North
+
+        // 位置・速度更新（球面近似）
         for (int i = 0; i < 3; ++i) {
             state.x[3 + i] += accel[i] * dt;
             state.x[i]     += state.x[3 + i] * dt + 0.5f * accel[i] * dt * dt;
         }
 
+        // スケール更新
         float res = obs_accel.norm() - accel.norm();
         state.x[12] = std::clamp(state.x[12] + res * dt * 0.5f, 0.7f, 1.3f);
     }

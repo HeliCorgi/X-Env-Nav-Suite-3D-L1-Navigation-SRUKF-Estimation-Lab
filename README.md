@@ -68,6 +68,24 @@ MIT
 - NavEngine_L1 is fully 3D compatible
 - SRUKF provides foundational concepts for state estimation learning
 
+## References (正確な出典)
+
+- van der Merwe, R. and Wan, E.A. (2001).  
+  "The Square-Root Unscented Kalman Filter for State and Parameter-Estimation"  
+  ESANN 2001 proceedings.
+
+- Titterton, D. and Weston, J. (2004).  
+  "Strapdown Inertial Navigation Technology" (2nd Edition), AIAA.
+
+- Groves, P.D. (2013).  
+  "Principles of GNSS, Inertial, and Integrated Navigation Systems", Artech House.
+
+- U.S. Standard Atmosphere, 1976 (NASA/NOAA/USAF).  
+  NASA TM X-74335.
+
+- Sutton, K. and Graves, R.A. (1971).  
+  NASA Technical Report R-376.
+
 ## References
 
 - Atmosphere model:  

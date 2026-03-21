@@ -39,7 +39,7 @@ int main() {
 
     std::cout << std::fixed << std::setprecision(3);
 
-    for (int i = 0; i < 250; ++i) {
+    for (int i = 0; i < 500; ++i) {
         double alt  = engine.get_pos().z();
         double speed = engine.get_vel().norm();
         Eigen::Vector3f meas_accel(0.20f, 0.10f, 0.05f);
@@ -53,15 +53,13 @@ int main() {
         Eigen::VectorXf noise = Eigen::VectorXf::Random(6) * 0.02f;
         ukf.update(z + noise);
 
-        double mach = speed / env.get_speed_of_sound(alt);
+        double mach = (speed > 0.0) ? speed / env.get_speed_of_sound(alt) : 0.0;
         const auto& raw = engine.get_state();
 
-        std::cout << "[t=" << (i*dt) << "s] "
-                  << "Raw: pos=(" << raw.x[0] << "," << raw.x[1] << "," << raw.x[2] << ") "
-                  << "vel=" << speed << " m/s  Mach=" << mach << "\n"
-                  << "     Est: pos=(" << ukf.x[0] << "," << ukf.x[1] << "," << ukf.x[2] << ")\n"
-                  << "     PCM=" << (env.get_pcm_remaining()*100) << "%  "
-                  << "Alt=" << alt << "m  rho=" << env.get_air_density(alt) << "\n\n";
+        if (i % 50 == 0) {  // 50ステップごとに表示
+            std::cout << "[t=" << (i*dt) << "s] Mach=" << mach 
+                      << "  Alt=" << alt << "m  rho=" << env.get_air_density(alt) << "\n";
+        }
     }
     return 0;
 }
