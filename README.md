@@ -67,3 +67,18 @@ MIT
 - main.cpp is ready to copy/paste and run
 - NavEngine_L1 is fully 3D compatible
 - SRUKF provides foundational concepts for state estimation learning
+
+## References
+
+- Atmosphere model:  
+  U.S. Standard Atmosphere, 1976 (NASA/NOAA/USAF).  
+  NASA TM X-74335 / NOAA-S/T-76-1562 (1976).  
+  https://ntrs.nasa.gov/citations/19770009539
+
+- Convective heating formula:  
+  Sutton, K. and Graves, R. A., Jr., "A General Stagnation-Point Convective-Heating Equation for Arbitrary Gas Mixtures," NASA Technical Report R-376 (November 1971).
+
+- Gravity model:  
+  World Geodetic System 1984 (WGS84), NIMA TR8350.2.
+
+- Coriolis term: Standard geophysical approximation (2ω × v).

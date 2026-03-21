@@ -5,9 +5,6 @@
 #include "nav_estimator_srukf.hpp"
 #include "env_adaptive_core.hpp"
 
-// ================================
-// SRUKFラッパ（L1航法専用 6次元: pos3+vel3）
-// ================================
 class L1_SRUKF : public NavEstimator_SRUKF {
 public:
     L1_SRUKF() {
@@ -39,29 +36,32 @@ int main() {
     EnvAdaptive_Core env;
 
     const float dt = 0.02f;
-    Eigen::Vector3f meas_accel(0.20f, 0.10f, 0.05f);
 
     std::cout << std::fixed << std::setprecision(3);
 
-    for (int i=0;i<250;++i){
-        engine.update(meas_accel.norm(), dt);
-        engine.predict(dt, meas_accel);
+    for (int i = 0; i < 250; ++i) {
+        double alt  = engine.get_pos().z();
+        double speed = engine.get_vel().norm();
+        Eigen::Vector3f meas_accel(0.20f, 0.10f, 0.05f);
 
+        env.update_thermal(dt, alt, speed);
+        engine.predict(dt, meas_accel, alt, speed, env);
+
+        // SRUKF更新（位置＋速度観測）
         ukf.predict(dt, meas_accel);
-        Eigen::Vector3f noisy_z = engine.get_pos() + Eigen::Vector3f::Random()*0.02f;
-        ukf.update(noisy_z);
+        Eigen::VectorXf z(6); z << engine.get_pos(), engine.get_vel();
+        Eigen::VectorXf noise = Eigen::VectorXf::Random(6) * 0.02f;
+        ukf.update(z + noise);
 
-        env.update_thermal(dt, 1200.0);
-
+        double mach = speed / env.get_speed_of_sound(alt);
         const auto& raw = engine.get_state();
+
         std::cout << "[t=" << (i*dt) << "s] "
                   << "Raw: pos=(" << raw.x[0] << "," << raw.x[1] << "," << raw.x[2] << ") "
-                  << "vel=(" << raw.x[3] << "," << raw.x[4] << "," << raw.x[5] << ") "
-                  << "scale=" << raw.x[12] << "\n"
-                  << "     Est: pos=(" << ukf.x[0] << "," << ukf.x[1] << "," << ukf.x[2] << ") "
-                  << "vel=(" << ukf.x[3] << "," << ukf.x[4] << "," << ukf.x[5] << ")\n"
-                  << "     PCM=" << (env.get_pcm_remaining()*100) << "% "
-                  << "Temp=" << env.get_temperature() << "℃\n\n";
+                  << "vel=" << speed << " m/s  Mach=" << mach << "\n"
+                  << "     Est: pos=(" << ukf.x[0] << "," << ukf.x[1] << "," << ukf.x[2] << ")\n"
+                  << "     PCM=" << (env.get_pcm_remaining()*100) << "%  "
+                  << "Alt=" << alt << "m  rho=" << env.get_air_density(alt) << "\n\n";
     }
     return 0;
 }
